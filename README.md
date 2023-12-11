@@ -1,6 +1,11 @@
-![athena](./assets/athena.png)
+<div align="center">
 
-# Athena
+<img src="./assets/athena.png" alt="athena" width="330" height="300">
+
+<h1>Athena</h1>
+
+</div>
+
 Athena is a Discord client and standalone API wrapper made for integration with [Winton](https://github.com/gatariee/Winton) which allows for operators to interact with their beacons via Discord.
 > https://overwatch.fandom.com/wiki/Athena
 
