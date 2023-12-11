@@ -1,11 +1,10 @@
-import random
+from dotenv import load_dotenv
 import os
 import discord
 import asyncio
 
 
 from tabulate import tabulate
-from dotenv import load_dotenv
 from discord.ext import commands, tasks
 
 import Athena.agents
@@ -13,15 +12,17 @@ import Athena.handler
 
 intents = discord.Intents.default()
 intents.message_content = True
+
+
 load_dotenv()
 token = os.getenv("token")
 teamserver = os.getenv("teamserver")
 http_listener = os.getenv("http_listener")
 channel_id = int(os.getenv("channel_id"))
+alert_id = int(os.getenv("alert_id"))
 active_beacon_sessions = {}
 
-authorized_users = [192548255098208256]
-
+authorized_users = []
 
 class Context(commands.Context):
     async def tick(self, value):
@@ -84,10 +85,25 @@ class MyBot(commands.Bot):
     async def beacon_update_task(self):
         new_agents = await self.update_beacons()
         if new_agents and len(new_agents) > len(self.agents):
-            new_beacon_info = f"[+] New beacon from {new_agents[-1]['Hostname']} @ {new_agents[-1]['IP']}"
-            print(f"[*] Sending new beacon info to channel #{self.update_channel}")
-            if self.update_channel:
-                await self.update_channel.send(new_beacon_info)
+            new_agent = new_agents[-1]
+            embed = discord.Embed(title="⚠️  New Beacon Alert", color=0x00ff00)
+            embed.add_field(name="Hostname", value=new_agent['Hostname'], inline=True)
+            embed.add_field(name="IP Address", value=new_agent['IP'], inline=True)
+            embed.add_field(name="Operating System", value=new_agent['OS'], inline=True)
+            embed.add_field(name="Sleep Time", value=f"{new_agent['Sleep']}s", inline=True)
+            embed.add_field(name="Jitter", value=f"{new_agent['Jitter']}", inline=True)
+            embed.add_field(name="Process ID", value=new_agent['PID'], inline=True)
+            embed.set_footer(text="Beacon Information")
+
+            # only auth ppl should be pinged, but can change this to @here if need
+            mention_users = ', '.join([f'<@{user_id}>' for user_id in authorized_users])
+            mention_text = f"||{mention_users}||"
+
+            print(f"[*] Sending new beacon info to channel #{self.alert_channel}")
+            if self.alert_channel:
+                await self.alert_channel.send(content=mention_text, embed=embed)
+                # send to general as well for debug and im lazy :D
+                #await self.update_channel.send(content=mention_text, embed=embed)
             else:
                 print(
                     f"[!] Uh oh, looks like we have nowhere to send this message to. (channel_id: {channel_id})"
@@ -98,6 +114,7 @@ class MyBot(commands.Bot):
         """Notify when the bot is ready and has logged in."""
         print(f"[*] Logged in as {self.user} (ID: {self.user.id})")
         self.update_channel = self.get_channel(channel_id)
+        self.alert_channel = self.get_channel(alert_id)
         self.beacon_update_task.start()
 
     async def get_context(self, message: discord.Message, *, cls=Context):
@@ -119,10 +136,14 @@ async def help(ctx: Context):
 
     help_menu = """
     ```
-    Commands:
+    Commands (General):
         !help - Display this help menu
         !agents - List active agents (optional args: `desktop` or `mobile` for friendlier-formatting)
         !select <UID> - Select an agent to interact with
+    
+    Commands (Beacon Sessions):
+        !ls - List files in current directory
+        !exit - Exit beacon session
     ```
     """
     await ctx.send(help_menu)
@@ -210,30 +231,44 @@ async def select(ctx: Context, uid: str):
     else:
         await ctx.send(f"Could not find agent with UID {uid}")
 
+
 @bot.event
 async def on_message(message: discord.message.Message):
-    if message.author == bot.user:
+    if message.author == bot.user:  # are you yourself?
         return
 
+    if (message.author.id not in authorized_users) and (message.content.startswith("!")):
+        await message.channel.send("You are not authorized to use this bot.")
+        return
 
     # everything here is for beacon sessions via threads
     if message.channel.id in active_beacon_sessions:
         uid = active_beacon_sessions[message.channel.id]
-        #agent = next((agent for agent in bot.agents if agent["UID"] == uid), None)
+        agent = next((agent for agent in bot.agents if agent["UID"] == uid), None)
 
-        if message.content == "!exit" or message.content == "exit":
+        if message.content == "!exit":
             await message.channel.send("Exiting beacon session...")
             await message.channel.delete()
             del active_beacon_sessions[message.channel.id]
             return
-
-        ok, res = await Athena.handler.handle_command(message.content, uid, message)
-        if ok:
-            await message.channel.send(res)
-        else:
-            await message.channel.send(f"Error: {res}")
+        
+        if message.content.startswith("!"):
+            content = message.content[1:]
+            ok, res = await Athena.handler.handle_command(
+                content,
+                uid,
+                message,
+                http_listener,
+                int(agent["Sleep"]),
+                agent["Hostname"],
+            )
+            if ok:
+                await message.channel.send(res)
+            else:
+                pass
 
     await bot.process_commands(message)
+
 
 async def cleanup():
     print("[*] Cleaning up...")

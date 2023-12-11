@@ -72,5 +72,5 @@ async def handle_command(command: str, uid: str, message: discord.message.Messag
             package = await pretty_print_ls(files, hostname)
             return True, package
         case _:
-            return False, "[!] Unknown command."
+            return False, ""
              

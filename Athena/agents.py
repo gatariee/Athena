@@ -13,15 +13,12 @@ def update_beacons(url: str, listener: str = "http") -> list[Agent]:
         list[Agent]: List of agents
     """
     try:
-        print("Hello")
         match listener:
             case "http":
                 res = requests.get(f"{url}/agents")
-                print("res made")
                 if res.status_code == 200:
                     return res.json()["agents"]
                 else:
-                    print("a")
                     return [] # Teamserver broke, but is alive.
             case _:
                 return [] # unknown listener
