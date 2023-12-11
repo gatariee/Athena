@@ -15,6 +15,7 @@ Athena is a Discord client and standalone API wrapper made for integration with 
 ## Usage
 
 * New beacons will automatically be added to the `!agents` list, and alerts will be sent to the `alert_id` channel if specified.
+
 ![4](./assets/4.png)
 
 1. `!agents` - Lists all active beacons connected to the teamserver.
@@ -29,7 +30,7 @@ Athena is a Discord client and standalone API wrapper made for integration with 
 4. Interact with the beacon via the newly spawned thread.
 
     ![7](./assets/7.png)
-    
+
 5. Exit the beacon session safely by typing `!exit` & the new thread should be deleted gracefully.
 
 ## Environment Variables
