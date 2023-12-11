@@ -50,3 +50,6 @@ A more functional GUI-client can be found [here](https://github.com/gatariee/Win
 
 ## Note
 Similar to [Winton](https://github.com/gatariee/Winton), this project was my first time writing a Discord bot- apologies in advance for the spaghetti code. 🙏
+
+## wait, that landing pic looks really good 👀
+![athena2](./assets/athena2.png)
